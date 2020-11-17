@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { of, pipe } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
+import { LikeParams } from '../_models/likeParams';
 import { Member } from '../_models/member';
 import { PaginatedResult } from '../_models/pagination';
 import { User } from '../_models/user';
@@ -22,13 +23,16 @@ export class MembersService {
   baseUrl = environment.apiUrl;
   members: Member[] = [];
   memberCache = new Map();
+  likeCache = new Map();
   user: User;
   userParams: UserParams;
+  likeParams: LikeParams;
 
   constructor(private http: HttpClient, private accountService: AccountService) { 
     this.accountService.currentUser$.pipe(take(1)).subscribe(user => {
       this.user = user;
       this.userParams = new UserParams(user);
+      this.likeParams = new LikeParams();
     })
   }
 
@@ -43,6 +47,18 @@ export class MembersService {
   resetUserParams() {
     this.userParams = new UserParams(this.user);
     return this.userParams;
+  }
+
+  getLikeParams() {
+    return this.likeParams;
+  }
+
+  setLikeParams(params: LikeParams) {
+    this.likeParams = params;
+  }
+
+  resetLikeCache() {
+    this.likeCache = new Map();
   }
 
   getMembers(userParams: UserParams) {
@@ -73,15 +89,11 @@ export class MembersService {
     if (member) {
       return of(member);
     }
-    return this.http.get<Member>(this.baseUrl + 'users/' + username) //, httpOptions);
+    return this.http.get<Member>(this.baseUrl + 'users/' + username);
   }
 
   updateMember(member: Member) {
     return this.http.put(this.baseUrl + 'users', member);
-      map(() => {
-        const index = this.members.indexOf(member);
-        this.members[index] = member;
-      })
   }
 
   setMainPhoto(photoId: number) {
@@ -90,6 +102,27 @@ export class MembersService {
 
   deletePhoto(photoId: number) {
     return this.http.delete(this.baseUrl + 'users/delete-photo/' + photoId);
+  }
+
+  addLike(username: string) {
+    return this.http.post(this.baseUrl + 'likes/' + username, {});
+  }
+
+  getLikes(likeParams: LikeParams) {
+    var response = this.likeCache.get(Object.values(likeParams).join('-'));
+    if (response) {
+      return of(response);
+    }
+
+    let params = this.getPaginationHeaders(likeParams.pageNumber, likeParams.pageSize);
+
+    params = params.append('predicate', likeParams.predicate);
+
+    return this.getPaginatedResult<Partial<Member[]>>(this.baseUrl + 'likes', params)
+      .pipe(map(response => {
+        this.likeCache.set(Object.values(likeParams).join('-'), response);
+        return response;
+      }))
   }
 
   private getPaginatedResult<T>(url, params) {
