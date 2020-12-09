@@ -20,10 +20,6 @@ namespace API
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
-            // services.AddSwaggerGen(c =>
-            // {
-            //     c.SwaggerDoc("v1", new OpenApiInfo { Title = "API", Version = "v1" });
-            // });
             services.AddCors();
             // from Extensions folder
             services.AddApplicationServices(_config);
@@ -42,9 +38,9 @@ namespace API
             app.UseRouting();
 
             app.UseCors(policy => policy.AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials()
-            .WithOrigins("https://localhost:4200"));
+                .AllowAnyMethod()
+                .AllowCredentials()
+                .WithOrigins("https://localhost:4200"));
 
             app.UseAuthentication();
 
