@@ -21,6 +21,7 @@ namespace API.Data
         public DbSet<Message> Messages { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<Connection> Connections { get; set; }
+        public DbSet<Photo> Photos { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -61,6 +62,8 @@ namespace API.Data
                 .HasOne(u => u.Sender)
                 .WithMany(m => m.MessageSent)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Photo>().HasQueryFilter(p => p.IsApproved == true);
             
             builder.ApplyUtcDateTimeConverter();
         }
@@ -105,6 +108,15 @@ namespace API.Data
                     }
                 }
             }
+        }
+    }
+
+    // HELPER TO REMOVE ALL CONNECTIONS ON STARTUP. CALLED IN STARTUP.
+    public static class EntityExtensions
+    {
+        public static void Clear<T>(this DbSet<T> dbSet) where T : class
+        {
+            dbSet.RemoveRange(dbSet);
         }
     }
 }

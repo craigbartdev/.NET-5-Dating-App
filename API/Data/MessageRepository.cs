@@ -86,13 +86,13 @@ namespace API.Data
         }
 
         public async Task<IEnumerable<MessageDto>> GetMessageThread(string currentUsername, 
-            string recipientUsername)
+            string otherUsername)
         {
             var messages = await _context.Messages
                 .Where(m => m.Recipient.UserName == currentUsername && m.RecipientDeleted == false
-                        && m.Sender.UserName == recipientUsername
+                        && m.Sender.UserName == otherUsername
                         || m.Sender.UserName == currentUsername
-                        && m.Recipient.UserName == recipientUsername && m.SenderDeleted == false
+                        && m.Recipient.UserName == otherUsername && m.SenderDeleted == false
                 )
                 .OrderBy(m => m.MessageSent)
                 .ProjectTo<MessageDto>(_mapper.ConfigurationProvider)
@@ -103,6 +103,8 @@ namespace API.Data
 
             if (unreadMessages.Any())
             {
+                await SetDateRead(otherUsername, currentUsername);
+
                 foreach (var message in unreadMessages)
                 {
                     message.DateRead = DateTime.UtcNow;
@@ -117,9 +119,12 @@ namespace API.Data
             _context.Connections.Remove(connection);
         }
 
-        // public async Task<bool> SaveAllAsync()
-        // {
-        //     return await _context.SaveChangesAsync() > 0;
-        // }
+        private async Task SetDateRead(string senderUsername, string recipientUsername)
+        {
+            string commandText = @"UPDATE Messages SET DateRead = @p0 
+                WHERE SenderUsername = @p1 AND RecipientUsername = @p2 AND DateRead IS NULL";
+            await _context.Database.ExecuteSqlRawAsync(commandText, DateTime.UtcNow, 
+                senderUsername, recipientUsername);
+        }
     }
 }
