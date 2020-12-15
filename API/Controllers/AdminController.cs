@@ -13,8 +13,10 @@ namespace API.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IUnitOfWork _unitOfWork;
-        public AdminController(UserManager<AppUser> userManager, IUnitOfWork unitOfWork)
+        private readonly IPhotoService _photoService;
+        public AdminController(UserManager<AppUser> userManager, IUnitOfWork unitOfWork, IPhotoService photoService)
         {
+            _photoService = photoService;
             _unitOfWork = unitOfWork;
             _userManager = userManager;
         }
@@ -80,9 +82,9 @@ namespace API.Controllers
             var user = await _unitOfWork.UserRepository.GetUserByIdWithPhotosAsync(photo.AppUserId);
 
             if (!user.Photos.Any(x => x.IsMain)) photo.IsMain = true;
-            
+
             if (await _unitOfWork.Complete()) return Ok();
-            
+
             return BadRequest("Could not approve photo");
         }
 
@@ -91,14 +93,20 @@ namespace API.Controllers
         public async Task<ActionResult> RejectPhoto(int photoId)
         {
             var photo = await _unitOfWork.PhotoRepository.GetPhotoById(photoId);
-            
+
             if (photo == null) return NotFound("Could not find photo");
+
+            if (photo.PublicId != null)
+            {
+                var result = await _photoService.DeletePhotoAsync(photo.PublicId);
+                if (result.Error != null) return BadRequest(result.Error.Message);
+            }
             
             _unitOfWork.PhotoRepository.RemovePhoto(photo);
 
-            if ( await _unitOfWork.Complete()) return Ok();
+            if (await _unitOfWork.Complete()) return Ok();
 
-            return BadRequest("Could not remove photo");
+            return BadRequest("Problem when removing photo");
         }
     }
 }
