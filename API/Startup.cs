@@ -1,3 +1,4 @@
+using System;
 using API.Data;
 using API.Extensions;
 using API.Middleware;
@@ -30,7 +31,7 @@ namespace API
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, DataContext context)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IServiceProvider serviceProvider)
         {
             app.UseMiddleware<ExceptionMiddleware>();
 
@@ -47,12 +48,18 @@ namespace API
 
             app.UseAuthorization();
 
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
                 endpoints.MapHub<PresenceHub>("hubs/presence");
                 endpoints.MapHub<MessageHub>("hubs/message");
+                endpoints.MapFallbackToController("Index", "Fallback");
             });
+
+            var context = serviceProvider.GetService<Data.DataContext>();
 
             context.Connections.Clear();
             context.SaveChangesAsync();

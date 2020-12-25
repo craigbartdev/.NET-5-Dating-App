@@ -5,6 +5,7 @@
 
 # added this manually
 appsettings.json
+appsettings.Development.json
 datingapp.db
 
 # User-specific files
