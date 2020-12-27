@@ -103,12 +103,14 @@ namespace API.Data
 
             if (unreadMessages.Any())
             {
-                await SetDateRead(otherUsername, currentUsername);
-
                 foreach (var message in unreadMessages)
                 {
                     message.DateRead = DateTime.UtcNow;
                 }
+
+                // await SetDateRead(otherUsername, currentUsername);
+
+                SetDateRead(unreadMessages);
             }
 
             return messages;
@@ -119,12 +121,21 @@ namespace API.Data
             _context.Connections.Remove(connection);
         }
 
-        private async Task SetDateRead(string senderUsername, string recipientUsername)
+        private void SetDateRead(List<MessageDto> messageDtos)
         {
-            string commandText = @"UPDATE Messages SET DateRead = @p0 
-                WHERE SenderUsername = @p1 AND RecipientUsername = @p2 AND DateRead IS NULL";
-            await _context.Database.ExecuteSqlRawAsync(commandText, DateTime.UtcNow, 
-                senderUsername, recipientUsername);
+            // worked for SQLite but not Postgres. passed SenderUsername and RecipientUsername to this function
+            // string commandText = @"UPDATE Messages SET DateRead = @p0 
+            //     WHERE SenderUsername = @p1 AND RecipientUsername = @p2 AND DateRead IS NULL";
+            // await _context.Database.ExecuteSqlRawAsync(commandText, DateTime.UtcNow, 
+            //     senderUsername, recipientUsername);
+
+            // optimized solution using entity, but not async
+            var messages = _mapper.Map<Message[]>(messageDtos);
+            _context.Messages.AttachRange(messages);
+            
+            foreach (var message in messages) {
+                _context.Entry(message).Property(x => x.DateRead).IsModified = true;
+            }
         }
     }
 }

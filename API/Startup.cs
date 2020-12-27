@@ -27,7 +27,9 @@ namespace API
             services.AddApplicationServices(_config);
             services.AddIdentityServices(_config);
             // for SignalR
-            services.AddSignalR();
+            services.AddSignalR(o => {
+                o.EnableDetailedErrors = true;
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -62,7 +64,7 @@ namespace API
             var context = serviceProvider.GetService<Data.DataContext>();
 
             context.Connections.Clear();
-            context.SaveChangesAsync();
+            context.SaveChanges();
         }
     }
 }
