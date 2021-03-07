@@ -22,5 +22,7 @@ namespace API.Entities
         public ICollection<Message> MessageSent { get; set; }
         public ICollection<Message> MessageReceived { get; set; }
         public ICollection<AppUserRole> UserRoles { get; set; }
+        public string RefreshToken { get; set; }
+        public DateTime RefreshTokenExpiryTime { get; set; }
     }
 }
