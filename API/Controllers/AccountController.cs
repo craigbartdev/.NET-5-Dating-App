@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,8 +22,10 @@ namespace API.Controllers
         private readonly IMapper _mapper;
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
-        public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ITokenService tokenService, IMapper mapper)
+        private readonly IUnitOfWork _unitOfWork;
+        public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ITokenService tokenService, IUnitOfWork unitOfWork, IMapper mapper)
         {
+            _unitOfWork = unitOfWork;
             _signInManager = signInManager;
             _userManager = userManager;
             _mapper = mapper;
@@ -45,13 +50,25 @@ namespace API.Controllers
 
             if (!roleResult.Succeeded) return BadRequest(result.Errors);
 
-            return new UserDto
-            {
-                Username = user.UserName,
-                Token = await _tokenService.CreateToken(user),
-                KnownAs = user.KnownAs,
-                Gender = user.Gender
-            };
+            var accessToken = await _tokenService.CreateAccessToken(user);
+            var refreshToken = _tokenService.CreateRefreshToken();
+
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
+            if (await _unitOfWork.Complete()) {
+                return Ok(
+                    new UserDto {
+                        Username = user.UserName,
+                        Token = accessToken,
+                        RefreshToken = refreshToken,
+                        KnownAs = user.KnownAs,
+                        Gender = user.Gender
+                    }
+                );
+            }
+                
+            return BadRequest("Problem saving refresh token");
         }
 
         [HttpPost("login")]
@@ -68,14 +85,26 @@ namespace API.Controllers
 
             if (!result.Succeeded) return Unauthorized();
 
-            return new UserDto
-            {
-                Username = user.UserName,
-                Token = await _tokenService.CreateToken(user),
-                PhotoUrl = user.Photos.FirstOrDefault(x => x.IsMain)?.Url,
-                KnownAs = user.KnownAs,
-                Gender = user.Gender
-            };
+            var accessToken = await _tokenService.CreateAccessToken(user);
+            var refreshToken = _tokenService.CreateRefreshToken();
+
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
+            if (await _unitOfWork.Complete()) {
+                return Ok(
+                    new UserDto {
+                        Username = user.UserName,
+                        Token = accessToken,
+                        RefreshToken = refreshToken,
+                        PhotoUrl = user.Photos.FirstOrDefault(x => x.IsMain)?.Url,
+                        KnownAs = user.KnownAs,
+                        Gender = user.Gender
+                    }
+                );
+            }
+                
+            return BadRequest("Problem saving refresh token");
         }
 
         private async Task<bool> UserExists(string username)

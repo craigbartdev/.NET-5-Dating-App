@@ -1,8 +1,9 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaderResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { ReplaySubject } from 'rxjs';
-import {map} from 'rxjs/operators';
+import {map, take, tap} from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
+import { Tokens } from '../_models/tokens';
 import { User } from '../_models/user';
 import { PresenceService } from './presence.service';
 
@@ -54,7 +55,22 @@ export class AccountService {
     this.presence.stopHubConnection();
   }
 
-  getDecodedToken(token) {
+  getDecodedToken(token: string) {
     return JSON.parse(atob(token.split('.')[1]))
+  }
+
+  refresh(tokens: Tokens) {
+    return this.http.post(this.baseUrl + 'token/refresh', tokens).pipe(
+      // tap allows us to pipe and map in the jwt interceptor as well
+      tap((tokens: Tokens) => {
+        if (tokens) {
+          this.currentUser$.pipe(take(1)).subscribe(user => {
+            user.token = tokens.accessToken;
+            user.refreshToken = tokens.refreshToken;
+            this.setCurrentUser(user);
+          })
+        }
+      })
+    )
   }
 }
