@@ -1,6 +1,7 @@
 using System;
 using API.Data;
 using API.Extensions;
+using API.Helpers;
 using API.Middleware;
 using API.SignalR;
 using Microsoft.AspNetCore.Builder;
@@ -64,6 +65,7 @@ namespace API
             var context = serviceProvider.GetService<Data.DataContext>();
 
             context.Connections.Clear();
+            context.Groups.Clear();
             context.SaveChanges();
         }
     }

@@ -55,6 +55,11 @@ export class JwtInterceptor implements HttpInterceptor {
   }
 
   private handle401Error(request: HttpRequest<any>, next: HttpHandler, user: User) {
+
+    if (user == null) {
+      return next.handle(request);
+    }
+
     const tokens: Tokens = {accessToken: user.token, refreshToken: user.refreshToken}
     
     // call refresh method to get a new access token

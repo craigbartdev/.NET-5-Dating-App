@@ -1,17 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
-using API.Data;
 using API.DTOs;
 using API.Entities;
+using API.Helpers;
 using API.Interfaces;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers
@@ -23,8 +21,10 @@ namespace API.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly IUnitOfWork _unitOfWork;
-        public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ITokenService tokenService, IUnitOfWork unitOfWork, IMapper mapper)
+        private readonly IEmailSender _emailSender;
+        public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ITokenService tokenService, IUnitOfWork unitOfWork, IMapper mapper, IEmailSender emailSender)
         {
+            _emailSender = emailSender;
             _unitOfWork = unitOfWork;
             _signInManager = signInManager;
             _userManager = userManager;
@@ -42,6 +42,8 @@ namespace API.Controllers
 
             user.UserName = registerDto.Username.ToLower();
 
+            user.Email = registerDto.Email.ToLower();
+
             var result = await _userManager.CreateAsync(user, registerDto.Password);
 
             if (!result.Succeeded) return BadRequest(result.Errors);
@@ -50,25 +52,20 @@ namespace API.Controllers
 
             if (!roleResult.Succeeded) return BadRequest(result.Errors);
 
-            var accessToken = await _tokenService.CreateAccessToken(user);
-            var refreshToken = _tokenService.CreateRefreshToken();
+            // send an email confirmation message
+            var emailToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var param = new Dictionary<string, string>
+            {
+                {"token", emailToken},
+                {"email", user.Email}
+            };
 
-            user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+            var callback = QueryHelpers.AddQueryString(registerDto.ClientURI, param);
 
-            if (await _unitOfWork.Complete()) {
-                return Ok(
-                    new UserDto {
-                        Username = user.UserName,
-                        Token = accessToken,
-                        RefreshToken = refreshToken,
-                        KnownAs = user.KnownAs,
-                        Gender = user.Gender
-                    }
-                );
-            }
-                
-            return BadRequest("Problem saving refresh token");
+            var message = new EmailMessage(new string[] { user.Email }, "Confirm Your Email", callback, null);
+            await _emailSender.SendEmailAsync(message);
+
+            return Ok();
         }
 
         [HttpPost("login")]
@@ -80,10 +77,14 @@ namespace API.Controllers
 
             if (user == null) return Unauthorized("Invalid username");
 
-            var result = await _signInManager
+            var passwordResult = await _signInManager
                 .CheckPasswordSignInAsync(user, loginDto.Password, false);
 
-            if (!result.Succeeded) return Unauthorized();
+            if (!passwordResult.Succeeded) return Unauthorized();
+
+            var emailResult = await _userManager.IsEmailConfirmedAsync(user);
+
+            if (!emailResult) return Unauthorized("Email has not been confirmed");
 
             var accessToken = await _tokenService.CreateAccessToken(user);
             var refreshToken = _tokenService.CreateRefreshToken();
@@ -91,9 +92,11 @@ namespace API.Controllers
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
 
-            if (await _unitOfWork.Complete()) {
+            if (await _unitOfWork.Complete())
+            {
                 return Ok(
-                    new UserDto {
+                    new UserDto
+                    {
                         Username = user.UserName,
                         Token = accessToken,
                         RefreshToken = refreshToken,
@@ -103,8 +106,64 @@ namespace API.Controllers
                     }
                 );
             }
-                
+
             return BadRequest("Problem saving refresh token");
+        }
+
+        [HttpPost("forgotpassword")]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordDto forgotPasswordDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest();
+            
+            var user = await _userManager.FindByEmailAsync(forgotPasswordDto.Email);
+            if (user == null)
+                return BadRequest("User does not exist");
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var param = new Dictionary<string, string>
+            {
+                { "token", token },
+                { "email", forgotPasswordDto.Email }
+            };
+
+            var callback = QueryHelpers.AddQueryString(forgotPasswordDto.ClientURI, param);
+
+            var message = new EmailMessage(new string[] { user.Email }, "Reset Password", callback, null);
+            await _emailSender.SendEmailAsync(message);
+
+            return Ok();
+        }
+
+        [HttpPost("ResetPassword")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordDto resetPasswordDto)
+        {
+            var user = await _userManager.FindByEmailAsync(resetPasswordDto.Email);
+
+            if (user == null)
+                return BadRequest("Invalid Request");
+            
+            var resetPassResult = await _userManager.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.Password);
+            if (!resetPassResult.Succeeded)
+            {
+                var errors = resetPassResult.Errors.Select(e => e.Description);
+                return BadRequest(new { Errors = errors });
+            }
+
+            return Ok();
+        }
+
+        [HttpGet("EmailConfirmation")]
+        public async Task<IActionResult> EmailConfirmation([FromQuery] string email, [FromQuery] string token)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null) return BadRequest("Invalid Email: User does not exist");
+
+            var confirmResult = await _userManager.ConfirmEmailAsync(user, token);
+            if (!confirmResult.Succeeded)
+                return BadRequest("Email Confirmation Failed");
+            
+            return Ok();
         }
 
         private async Task<bool> UserExists(string username)

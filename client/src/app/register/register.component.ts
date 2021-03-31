@@ -1,5 +1,5 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { AbstractControl, FormBuilder, FormControl, FormGroup, ValidatorFn, Validators } from '@angular/forms';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { AccountService } from '../_services/account.service';
@@ -29,34 +29,26 @@ export class RegisterComponent implements OnInit {
       gender: ['male'],
       username: ['', Validators.required],
       knownAs: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
       dateOfBirth: ['', Validators.required],
       city: ['', Validators.required],
       country: ['', Validators.required],
       password: ['', [Validators.required,
         Validators.minLength(4), Validators.maxLength(8)]],
-      confirmPassword: ['', [Validators.required, this.matchValues('password')]]
+      confirmPassword: ['', [Validators.required, this.accountService.matchValues('password')]]
     })
-    // this.registerForm = new FormGroup({
-    //   username: new FormControl('', Validators.required),
-    //   password: new FormControl('', [Validators.required,
-    //     Validators.minLength(4), Validators.maxLength(8)]),
-    //   confirmPassword: new FormControl('', [Validators.required, this.matchValues('password')])
-    // })
-  }
-
-  matchValues(matchTo: string): ValidatorFn {
-    return (control: AbstractControl) => {
-      return control?.value === control?.parent?.controls[matchTo].value ? null : {isMatching: true}
-    }
   }
 
   register() {
-    // console.log(this.registerForm.value);
-    this.accountService.register(this.registerForm.value).subscribe(res => {
-      this.router.navigateByUrl('/members');
-    }, error => {
-      this.validationErrors = error;
-    })
+    this.validationErrors = [];
+    this.accountService.register(this.registerForm.value)
+      .subscribe(res => {
+        this.toastr.success("Please check email to confirm", "Success");
+      }, error => {
+        error.error.forEach(err => {
+          this.validationErrors.push(err.description);
+        });
+      })
   }
 
   cancel() {

@@ -1,0 +1,13 @@
+<div class="card mt-5">
+    <div class="card-body">
+        <h1 class="card-title">Email Confirmation</h1>
+
+        <div *ngIf="showError" class="alert alert-danger" role="alert">
+            There was a problem confirming your email
+        </div>
+
+        <div *ngIf="showSuccess" class="alert alert-success" role="alert">
+            Your email has been successfully confirmed. Please log in above.
+        </div>
+    </div>
+</div>

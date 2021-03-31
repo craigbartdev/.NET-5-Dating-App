@@ -1,10 +1,15 @@
-import { HttpClient, HttpHeaderResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaderResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { AbstractControl, ValidatorFn } from '@angular/forms';
 import { ReplaySubject } from 'rxjs';
 import {map, take, tap} from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
+import { ForgotPassword } from '../_models/forgotPassword';
+import { Register } from '../_models/register';
+import { ResetPassword } from '../_models/resetPassword';
 import { Tokens } from '../_models/tokens';
 import { User } from '../_models/user';
+import { CustomEncoder } from './customEncoder';
 import { PresenceService } from './presence.service';
 
 @Injectable({
@@ -29,16 +34,11 @@ export class AccountService {
     )
   }
 
-  register(model: any) {
-    return this.http.post(this.baseUrl + 'account/register', model).pipe(
-      map((user: User) => {
-        if (user) {
-          this.setCurrentUser(user);
-          this.presence.createHubConnection(user);
-        }
-        return user;
-      })
-    )
+  register(model: Register) {
+    // set the client uri for email confirmation
+    // model.clientURI = "https://localhost:4200/emailConfirmation";
+    model.clientURI = location.origin + '/emailConfirmation';
+    return this.http.post(this.baseUrl + 'account/register', model);
   }
 
   setCurrentUser(user: User) {
@@ -72,5 +72,28 @@ export class AccountService {
         }
       })
     )
+  }
+
+  forgotPassword(email: string) {
+    const body: ForgotPassword =  { email, clientURI: location.origin + '/resetpassword' }
+    return this.http.post(this.baseUrl + 'account/forgotpassword', body);
+  }
+
+  resetPassword(body: ResetPassword) {
+    return this.http.post(this.baseUrl + 'account/resetpassword', body);
+  }
+
+  confirmEmail(token: string, email: string) {
+    let params = new HttpParams({ encoder: new CustomEncoder() })
+    params = params.append('token', token);
+    params = params.append('email', email);
+    return this.http.get(this.baseUrl + 'account/emailconfirmation', { params })
+  }
+
+  // for confirming password in register and reset-password
+  matchValues(matchTo: string): ValidatorFn {
+    return (control: AbstractControl) => {
+      return control?.value === control?.parent?.controls[matchTo].value ? null : {isMatching: true}
+    }
   }
 }

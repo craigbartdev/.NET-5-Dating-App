@@ -37,6 +37,9 @@
             <input name="username" [(ngModel)]="model.username" class="form-control mr-sm-2" type="text" placeholder="Username">
             <input name="password" [(ngModel)]="model.password" class="form-control mr-sm-2" type="password" placeholder="Password">
             <button class="btn btn-success my-2 my-sm-0" type="submit">Login</button>
+            <div class="nav-item">
+                <a class="nav-link text-light" routerLink="/forgotpassword" routerLinkActive='active'>Forgot Password?</a>
+            </div>
         </form>
     </div>
 </nav>
