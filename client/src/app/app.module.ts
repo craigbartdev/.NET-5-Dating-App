@@ -35,6 +35,7 @@ import { ConfirmDialogComponent } from './modals/confirm-dialog/confirm-dialog.c
 import { ForgotPasswordComponent } from './forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 import { EmailConfirmationComponent } from './email-confirmation/email-confirmation.component';
+import { ResendConfirmationComponent } from './resend-confirmation/resend-confirmation.component';
 
 @NgModule({
   declarations: [
@@ -63,7 +64,8 @@ import { EmailConfirmationComponent } from './email-confirmation/email-confirmat
     ConfirmDialogComponent,
     ForgotPasswordComponent,
     ResetPasswordComponent,
-    EmailConfirmationComponent
+    EmailConfirmationComponent,
+    ResendConfirmationComponent
   ],
   imports: [
     BrowserModule,

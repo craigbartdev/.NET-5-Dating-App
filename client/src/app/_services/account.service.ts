@@ -90,6 +90,11 @@ export class AccountService {
     return this.http.get(this.baseUrl + 'account/emailconfirmation', { params })
   }
 
+  resendConfirmation(email: string) {
+    const body: ForgotPassword = { email, clientURI: location.origin + '/emailConfirmation'}
+    return this.http.post(this.baseUrl + 'account/resendconfirmation', body);
+  }
+
   // for confirming password in register and reset-password
   matchValues(matchTo: string): ValidatorFn {
     return (control: AbstractControl) => {

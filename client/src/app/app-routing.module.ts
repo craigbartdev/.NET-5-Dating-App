@@ -12,6 +12,7 @@ import { MemberDetailComponent } from './members/member-detail/member-detail.com
 import { MemberEditComponent } from './members/member-edit/member-edit.component';
 import { MemberListComponent } from './members/member-list/member-list.component';
 import { MessagesComponent } from './messages/messages.component';
+import { ResendConfirmationComponent } from './resend-confirmation/resend-confirmation.component';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 import { AdminGuard } from './_guards/admin.guard';
 import { AuthGuard } from './_guards/auth.guard';
@@ -36,6 +37,7 @@ const routes: Routes = [
   {path: 'forgotpassword', component: ForgotPasswordComponent},
   {path: 'resetpassword', component: ResetPasswordComponent},
   {path: 'emailConfirmation', component: EmailConfirmationComponent},
+  {path: 'resendConfirmation', component: ResendConfirmationComponent},
   {path: 'errors', component: TestErrorsComponent},
   {path: 'not-found', component: NotFoundComponent},
   {path: 'server-error', component: ServerErrorComponent},

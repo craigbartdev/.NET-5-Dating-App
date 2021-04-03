@@ -1,17 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
-import { ForgotPassword } from '../_models/forgotPassword';
 import { AccountService } from '../_services/account.service';
 
 @Component({
-  selector: 'app-forgot-password',
-  templateUrl: './forgot-password.component.html',
-  styleUrls: ['./forgot-password.component.css']
+  selector: 'app-resend-confirmation',
+  templateUrl: './resend-confirmation.component.html',
+  styleUrls: ['./resend-confirmation.component.css']
 })
-export class ForgotPasswordComponent implements OnInit {
-  forgotPasswordForm: FormGroup;
+export class ResendConfirmationComponent implements OnInit {
+  resendEmailForm: FormGroup;
 
   constructor(private accountService: AccountService, private toastr: ToastrService, 
     private fb: FormBuilder) { }
@@ -21,14 +19,14 @@ export class ForgotPasswordComponent implements OnInit {
   }
 
   initializeForm() {
-    this.forgotPasswordForm = this.fb.group({
+    this.resendEmailForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]]
     })
   }
 
-  forgotPassword() {
-    const formValue = {...this.forgotPasswordForm.value}
-    this.accountService.forgotPassword(formValue.email)
+  resendEmail() {
+    const formValue = {...this.resendEmailForm.value}
+    this.accountService.resendConfirmation(formValue.email)
       .subscribe(res => {
         this.toastr.success('The link has been sent, please check your inbox')
       },
@@ -36,4 +34,5 @@ export class ForgotPasswordComponent implements OnInit {
         this.toastr.error(err)
       })
   }
+
 }

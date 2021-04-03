@@ -44,6 +44,7 @@ export class RegisterComponent implements OnInit {
     this.accountService.register(this.registerForm.value)
       .subscribe(res => {
         this.toastr.success("Please check email to confirm", "Success");
+        this.cancel();
       }, error => {
         error.error.forEach(err => {
           this.validationErrors.push(err.description);

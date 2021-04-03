@@ -110,7 +110,7 @@ namespace API.Controllers
             return BadRequest("Problem saving refresh token");
         }
 
-        [HttpPost("forgotpassword")]
+        [HttpPost("ForgotPassword")]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordDto forgotPasswordDto)
         {
             if (!ModelState.IsValid)
@@ -141,7 +141,7 @@ namespace API.Controllers
             var user = await _userManager.FindByEmailAsync(resetPasswordDto.Email);
 
             if (user == null)
-                return BadRequest("Invalid Request");
+                return BadRequest("Invalid Request: User does not exist");
             
             var resetPassResult = await _userManager.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.Password);
             if (!resetPassResult.Succeeded)
@@ -163,6 +163,28 @@ namespace API.Controllers
             if (!confirmResult.Succeeded)
                 return BadRequest("Email Confirmation Failed");
             
+            return Ok();
+        }
+
+        [HttpPost("ResendConfirmation")]
+        public async Task<IActionResult> ResendConfirmation(ForgotPasswordDto resendEmailDto) 
+        {
+            var user = await _userManager.FindByEmailAsync(resendEmailDto.Email);
+            if (user == null) return BadRequest("Invalid Email: User does not exist");
+
+            // send an email confirmation message
+            var emailToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var param = new Dictionary<string, string>
+            {
+                {"token", emailToken},
+                {"email", user.Email}
+            };
+
+            var callback = QueryHelpers.AddQueryString(resendEmailDto.ClientURI, param);
+
+            var message = new EmailMessage(new string[] { user.Email }, "Confirm Your Email", callback, null);
+            await _emailSender.SendEmailAsync(message);
+
             return Ok();
         }
 
