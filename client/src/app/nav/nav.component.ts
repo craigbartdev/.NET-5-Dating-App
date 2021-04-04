@@ -1,9 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
-import { Observable } from 'rxjs';
-import { take } from 'rxjs/operators';
-import { User } from '../_models/user';
+import { environment } from 'src/environments/environment';
 import { AccountService } from '../_services/account.service';
 
 @Component({
@@ -13,6 +11,7 @@ import { AccountService } from '../_services/account.service';
 })
 export class NavComponent implements OnInit {
   model: any = { }
+  isProd: boolean = environment.production;
 
 
   constructor(public accountService: AccountService,
